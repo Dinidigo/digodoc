@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Document Editor</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f5fd; /* Light Blue */
+            margin: 0;
+            padding: 0;
+        }
+
+        #editor-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #editor {
+            width: 80%;
+            margin: 50px auto;
+            padding: 10px;
+            border: 1px solid #afc2e0; /* Pale Blue */
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        #toolbar {
+            margin-bottom: 10px;
+            background-color: #64a4ff; /* Dodger Blue */
+            padding: 10px;
+            color: #fff;
+            border-bottom: 1px solid #4795e0; /* Darker Blue */
+        }
+
+        button {
+            margin-right: 5px;
+            background-color: #4caf50; /* Green */
+            color: #fff;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        input[type="color"] {
+            margin-right: 5px;
+        }
+
+        #chatbot-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        #chatbox {
+            border: 1px solid #64a4ff; /* Dodger Blue */
+            padding: 10px;
+            width: 80%;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+        }
+
+        input[type="text"] {
+            padding: 8px;
+            margin-right: 5px;
+        }
+
+        button {
+            background-color: #64a4ff; /* Dodger Blue */
+            color: #fff;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="editor-container">
+        <div id="toolbar">
+            <button onclick="execCommand('bold')">Bold</button>
+            <button onclick="execCommand('italic')">Italic</button>
+            <button onclick="execCommand('underline')">Underline</button>
+            <button onclick="execCommandWithArg('fontName', prompt('Enter font name:', 'Arial'))">Font</button>
+            <button onclick="execCommandWithArg('fontSize', prompt('Enter font size:', '2'))">Size</button>
+            <button onclick="execCommand('justifyLeft')">Align Left</button>
+            <button onclick="execCommand('justifyCenter')">Align Center</button>
+            <button onclick="execCommand('justifyRight')">Align Right</button>
+            <button onclick="execCommand('justifyFull')">Justify</button>
+            <label for="fontColorPicker">Font Color:</label>
+            <input type="color" id="fontColorPicker" onchange="applyFontColor()">
+            <button onclick="saveToFirebase()">Save to Firebase</button>
+        </div>
+
+        <div id="editor" contenteditable="true">
+            <p>Type your text here...</p>
+        </div>
+    </div>
+
+    <div id="chatbot-container">
+        <div id="chatbox">
+            <!-- Chat content will be displayed here -->
+        </div>
+        <input type="text" id="user-input" placeholder="Type your message...">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    
+    <script>
+        var firebaseConfig = {
+            apiKey: "AIzaSyA7xh_JSze4b0yAGeaclfzb1BrOBaUGMi0",
+            authDomain: "doc-edit-digo.firebaseapp.com",
+            databaseURL: "https://doc-edit-digo-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "doc-edit-digo",
+            storageBucket: "doc-edit-digo.appspot.com",
+            messagingSenderId: "975576550483",
+            appId: "1:975576550483:web:6b068277706aa3fc630aa6"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        var database = firebase.database();
+        var documentsRef = database.ref('document');
+        function execCommand(command) {
+            document.execCommand(command, false, null);
+        }
+    
+        function execCommandWithArg(command, arg) {
+            document.execCommand(command, false, arg);
+        }
+    
+        function applyFontColor() {
+            var fontColor = document.getElementById('fontColorPicker').value;
+            document.execCommand('foreColor', false, fontColor);
+        }
+    
+        function saveToFirebase() {
+            var content = document.getElementById('editor').innerHTML;
+    
+            // Generate a new key for the document
+            var newDocumentRef = documentsRef.push();
+    
+            // Set the content under the new key
+            newDocumentRef.set({
+                content: content
+            }).then(() => {
+                console.log('Data saved to Firebase!');
+            }).catch(error => {
+                console.error('Error saving data:', error);
+            });
+        }
+    
+        // Load content from Firebase on page load
+        documentsRef.once('value').then(snapshot => {
+            var data = snapshot.val();
+            if (data) {
+                var content = data.content;
+                document.getElementById('editor').innerHTML = content || '<p>Type your text here...</p>';
+            }
+        });
+    
+        // Chatbot component logic
+        // (Include the rest of your chatbot script here)
+    
+        // Function to handle user input in the chatbot
+        function sendMessage() {
+            const userInput = document.getElementById('user-input').value;
+    
+            // Process user input and generate chatbot response
+            const chatbotResponse = generateChatbotResponse(userInput);
+    
+            // Update conversation state
+            chatbotState.conversation.push({ user: userInput, bot: chatbotResponse });
+    
+            // Save updated state to session storage
+            sessionStorage.setItem('chatbotState', JSON.stringify(chatbotState));
+    
+            // Display the updated conversation
+            displayConversation();
+        }
+    
+        // Function to generate a chatbot response
+        function generateChatbotResponse(userInput) {
+            // Implement your chatbot's response generation logic here
+            // This could involve calling an API, processing natural language, etc.
+            return "Chatbot response to " + userInput;
+        }
+    
+        // Function to display the conversation
+        function displayConversation() {
+            const chatbox = document.getElementById('chatbox');
+    
+            // Clear existing content
+            chatbox.innerHTML = '';
+    
+            // Display the conversation
+            chatbotState.conversation.forEach(item => {
+                const message = document.createElement('div');
+                message.className = item.user ? 'user-message' : 'bot-message';
+                message.textContent = item.user || item.bot;
+                chatbox.appendChild(message);
+            });
+    
+            // Scroll to the bottom to show the latest message
+            chatbox.scrollTop = chatbox.scrollHeight;
+        }
+    </script>
+
+</body>
+</html>
