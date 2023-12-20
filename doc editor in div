@@ -169,9 +169,7 @@
         });
     
         // Chatbot component logic
-        // (Include the rest of your chatbot script here)
-    
-        // Function to handle user input in the chatbot
+       
         function sendMessage() {
             const userInput = document.getElementById('user-input').value;
     
